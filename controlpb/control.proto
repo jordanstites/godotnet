@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package godotnet.control;
 
-option go_package = "github.com/jordanstites/godotnet/internal/proto;controlpb";
+option go_package = "github.com/jordanstites/godotnet/controlpb;controlpb";
 
 // ---- Handshake / keepalive messages ----------------------------------
 
