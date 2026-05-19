@@ -20,7 +20,6 @@ Estimated time: **30 minutes.**
 - **Go 1.23+** — check with `go version`.
 - **protoc** — protocol-buffer compiler. On Windows, `winget install Google.Protobuf`.
 - **protoc-gen-go** — install with `go install google.golang.org/protobuf/cmd/protoc-gen-go@latest`. Ensure `$GOPATH/bin` (typically `~/go/bin`) is on `PATH` so `protoc` can find it.
-- **godotnet checked out locally** — the library lives at `h:\GameDevelopment\GodotProjects\MMO\godotnet` already.
 
 Verify:
 
@@ -32,18 +31,23 @@ protoc-gen-go --version
 
 ## Step 1: Create a new game project
 
-Make a new directory **next to** the godotnet directory (so a relative
-`replace` works):
+Make a new directory for your game and initialize a Go module. Pick any
+module path you like — the examples below use `example.com/neonera`.
 
 ```sh
-cd h:\GameDevelopment\GodotProjects\MMO
 mkdir neonera
 cd neonera
 go mod init example.com/neonera
 ```
 
-Add godotnet as a local dependency. Edit `go.mod` and add a `replace`
-directive at the bottom:
+Add godotnet and the protobuf runtime:
+
+```sh
+go get github.com/jordanstites/godotnet@latest
+go get google.golang.org/protobuf
+```
+
+Your `go.mod` should now look roughly like:
 
 ```go
 module example.com/neonera
@@ -51,21 +55,10 @@ module example.com/neonera
 go 1.23
 
 require (
-    github.com/jordanstites/godotnet v0.0.0
+    github.com/jordanstites/godotnet v0.1.1
     google.golang.org/protobuf v1.36.11
 )
-
-replace github.com/jordanstites/godotnet => ../godotnet
 ```
-
-Then run:
-
-```sh
-go mod tidy
-```
-
-This wires the local godotnet repo into your module. When you eventually
-push godotnet to GitHub, you'll drop the `replace` line.
 
 ## Step 2: Define your game protocol
 
@@ -231,7 +224,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	controlpb "github.com/jordanstites/godotnet/internal/proto"
+	"github.com/jordanstites/godotnet/controlpb"
 	pb "example.com/neonera/pb"
 )
 
@@ -385,7 +378,7 @@ And on the server:
 login: "alice" assigned id=1
 player 1 connected
 player 1 moved to (42.5, 17.0)
-player 1 disconnected: EOF
+player 1 disconnected: godotnet: read frame header: EOF
 ```
 
 Run two test clients side by side to see broadcasts go to both. The
@@ -399,7 +392,7 @@ in `ClientMessage` or `ServerMessage`, register a handler with
 The server speaks the same wire protocol no matter which client talks
 to it. For Godot, you need:
 
-1. **A GDScript protobuf library.** [oniksan/godobuf](https://github.com/oniksan/godobuf) is the common one — generates `.gd` classes from your `.proto` files. Copy both `game.proto` and the library's [`control.proto`](internal/proto/control.proto) into your Godot project and run godobuf on each.
+1. **A GDScript protobuf library.** [oniksan/godobuf](https://github.com/oniksan/godobuf) is the common one — generates `.gd` classes from your `.proto` files. Copy both `game.proto` and the library's [`control.proto`](../controlpb/control.proto) into your Godot project and run godobuf on each.
 
 2. **A network singleton.** A Godot Autoload that owns the `StreamPeerTCP` (for TCP) and `PacketPeerUDP` (for UDP) connections, runs the same handshake sequence as the test client, and exposes signals like `player_moved(id, x, y)` your game scripts can connect to.
 
@@ -431,6 +424,13 @@ the GDScript side.
 - **Forgot `paths=source_relative` on protoc.** Without it, `protoc-gen-go`
   generates the .pb.go in a nested path matching the go_package, which
   rarely matches your repo layout.
+- **Hyphen in the proto `package` line.** Protobuf package names are
+  identifiers — letters, digits, underscores only. If your Go module
+  has a hyphen (e.g. `example.com/my-game`), don't mirror it as
+  `package my-game;`; protoc will fail with `Expected ";"`. Use
+  `package my_game;` instead. (The `go_package` option *is* a Go
+  import path and can have hyphens — that's why one works and the
+  other doesn't.)
 - **`go mod tidy` complains it can't find godotnet.** Double-check the
   `replace` directive points at the correct relative path.
 - **UDP messages don't arrive.** Make sure you actually completed the
