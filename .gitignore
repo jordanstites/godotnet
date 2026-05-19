@@ -1,0 +1,35 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binaries and outputs
+*.test
+*.out
+coverage.txt
+coverage.html
+
+# Go workspace files
+go.work
+go.work.sum
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Claude Code per-project state
+.claude/
+
+# Local TLS certs used for dev only
+*.pem
+*.key
+*.crt
+!testdata/**/*.pem
+!testdata/**/*.key
+!testdata/**/*.crt
