@@ -21,7 +21,7 @@ use.
 
 Every TCP frame and UDP datagram is a serialized `ClientFrame` (client →
 server) or `ServerFrame` (server → client) defined in
-[`internal/proto/control.proto`](internal/proto/control.proto). The
+[`controlpb/control.proto`](controlpb/control.proto). The
 oneof body discriminates control plane (`Login`, `Ping`, etc.) from game
 plane (`game_payload`, which holds your marshaled `ClientMessage` or
 `ServerMessage` bytes).
@@ -110,9 +110,9 @@ plain TCP and your proxy handles certs.
 ## Requirements
 
 - Go 1.23+
-- For regenerating `internal/proto/*.pb.go`: `protoc` and
-  `protoc-gen-go` on `PATH`. Pre-generated files are checked in, so
-  consumers of the library don't need protoc.
+- For regenerating `controlpb/*.pb.go`: `protoc` and `protoc-gen-go`
+  on `PATH`. Pre-generated files are checked in, so consumers of the
+  library don't need protoc.
 
 ## Development
 

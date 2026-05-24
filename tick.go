@@ -6,7 +6,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	controlpb "github.com/jordanstites/godotnet/internal/proto"
+	controlpb "github.com/jordanstites/godotnet/controlpb"
 )
 
 // runTickLoop drives the simulation tick. It owns the per-tick sequence:

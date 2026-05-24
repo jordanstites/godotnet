@@ -7,7 +7,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	controlpb "github.com/jordanstites/godotnet/internal/proto"
+	controlpb "github.com/jordanstites/godotnet/controlpb"
 )
 
 // rpcTestServer builds a Server ready to dispatch RPCs and a Session

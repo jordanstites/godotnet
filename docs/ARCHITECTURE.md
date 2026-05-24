@@ -142,7 +142,7 @@ single `eventDisconnect` event so cleanup runs once.
 
 ## 5. Wire format
 
-Defined in [internal/proto/control.proto](internal/proto/control.proto).
+Defined in [controlpb/control.proto](controlpb/control.proto).
 
 ```
 TCP frame:  [4-byte BE length][protobuf bytes]
@@ -198,7 +198,7 @@ handles the outer wrapping/unwrapping.
 | [tickctx.go](tickctx.go) | `TickCtx` interface + `tickCtx` implementation |
 | [errors.go](errors.go) | Sentinel errors (`ErrAuthRejected`, `ErrPingTimeout`, etc.) |
 | [log.go](log.go) | `Logger` interface + default slog-backed impl |
-| [internal/proto/control.proto](internal/proto/control.proto) | Wire-format protobuf schema |
+| [controlpb/control.proto](controlpb/control.proto) | Wire-format protobuf schema |
 | [internal/transport/](internal/transport/) | `ListenTCP`, `ListenUDP`, plus `MemoryListener` for tests |
 
 ## 7. Public API at a glance

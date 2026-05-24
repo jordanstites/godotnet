@@ -779,7 +779,7 @@ const file_control_proto_rawDesc = "" +
 	"\x04ping\x18\x03 \x01(\v2\x16.godotnet.control.PingH\x00R\x04ping\x12#\n" +
 	"\fgame_payload\x18\x10 \x01(\fH\x00R\vgamePayload\x12B\n" +
 	"\frpc_response\x18\x11 \x01(\v2\x1d.godotnet.control.RpcResponseH\x00R\vrpcResponseB\x06\n" +
-	"\x04bodyB;Z9github.com/jordanstites/godotnet/internal/proto;controlpbb\x06proto3"
+	"\x04bodyB6Z4github.com/jordanstites/godotnet/controlpb;controlpbb\x06proto3"
 
 var (
 	file_control_proto_rawDescOnce sync.Once

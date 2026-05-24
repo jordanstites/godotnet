@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/jordanstites/godotnet"
-	controlpb "github.com/jordanstites/godotnet/internal/proto"
+	controlpb "github.com/jordanstites/godotnet/controlpb"
 	"github.com/jordanstites/godotnet/rpc"
 )
 

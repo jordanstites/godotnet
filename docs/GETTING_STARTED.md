@@ -20,7 +20,6 @@ Estimated time: **30 minutes.**
 - **Go 1.23+** — check with `go version`.
 - **protoc** — protocol-buffer compiler. On Windows, `winget install Google.Protobuf`.
 - **protoc-gen-go** — install with `go install google.golang.org/protobuf/cmd/protoc-gen-go@latest`. Ensure `$GOPATH/bin` (typically `~/go/bin`) is on `PATH` so `protoc` can find it.
-- **godotnet checked out locally** — the library lives at `h:\GameDevelopment\GodotProjects\MMO\godotnet` already.
 
 Verify:
 
@@ -32,18 +31,23 @@ protoc-gen-go --version
 
 ## Step 1: Create a new game project
 
-Make a new directory **next to** the godotnet directory (so a relative
-`replace` works):
+Make a new directory for your game and initialize a Go module. Pick any
+module path you like — the examples below use `example.com/neonera`.
 
 ```sh
-cd h:\GameDevelopment\GodotProjects\MMO
 mkdir neonera
 cd neonera
 go mod init example.com/neonera
 ```
 
-Add godotnet as a local dependency. Edit `go.mod` and add a `replace`
-directive at the bottom:
+Add godotnet and the protobuf runtime:
+
+```sh
+go get github.com/jordanstites/godotnet@latest
+go get google.golang.org/protobuf
+```
+
+Your `go.mod` should now look roughly like:
 
 ```go
 module example.com/neonera
@@ -51,21 +55,10 @@ module example.com/neonera
 go 1.23
 
 require (
-    github.com/jordanstites/godotnet v0.0.0
+    github.com/jordanstites/godotnet v0.1.1
     google.golang.org/protobuf v1.36.11
 )
-
-replace github.com/jordanstites/godotnet => ../godotnet
 ```
-
-Then run:
-
-```sh
-go mod tidy
-```
-
-This wires the local godotnet repo into your module. When you eventually
-push godotnet to GitHub, you'll drop the `replace` line.
 
 ## Step 2: Define your game protocol
 
@@ -231,7 +224,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	controlpb "github.com/jordanstites/godotnet/internal/proto"
+	"github.com/jordanstites/godotnet/controlpb"
 	pb "example.com/neonera/pb"
 )
 
@@ -385,7 +378,7 @@ And on the server:
 login: "alice" assigned id=1
 player 1 connected
 player 1 moved to (42.5, 17.0)
-player 1 disconnected: EOF
+player 1 disconnected: godotnet: read frame header: EOF
 ```
 
 Run two test clients side by side to see broadcasts go to both. The
@@ -396,43 +389,95 @@ in `ClientMessage` or `ServerMessage`, register a handler with
 
 ## Step 7: Connecting from Godot 4
 
-The server speaks the same wire protocol no matter which client talks
-to it. For Godot, you need:
+You don't need to write the handshake state machine yourself —
+[**godotnet-client**](https://github.com/jordanstites/godotnet-client)
+is a Godot 4 plugin that owns the TCP+UDP handshake, length-prefixed
+framing, ping/pong, and auto-reconnect. Your game scripts just send
+and receive marshaled bytes.
 
-1. **A GDScript protobuf library.** [oniksan/godobuf](https://github.com/oniksan/godobuf) is the common one — generates `.gd` classes from your `.proto` files. Copy both `game.proto` and the library's [`control.proto`](internal/proto/control.proto) into your Godot project and run godobuf on each.
+### 7a. Install the plugin
 
-2. **A network singleton.** A Godot Autoload that owns the `StreamPeerTCP` (for TCP) and `PacketPeerUDP` (for UDP) connections, runs the same handshake sequence as the test client, and exposes signals like `player_moved(id, x, y)` your game scripts can connect to.
+1. Clone or download godotnet-client and copy its `addons/godotnet_client/`
+   into your Godot project's `addons/` folder.
+2. Project → Project Settings → Plugins → enable **godotnet_client**.
+3. A `GodotNet` autoload singleton is now available globally.
 
-3. **The handshake state machine.** Same as the test client:
-   1. Connect TCP. Send `ClientFrame{Login{credentials: ...}}`. Read `ServerFrame{LoginResponse}`. Store `player_id` + `session_token`.
-   2. Bind UDP. Send `ClientFrame{UdpHandshake{...}}`. Read `ServerFrame{UdpHandshakeAck}`.
-   3. From here on, every outbound message is `ClientFrame{game_payload: marshal(ClientMessage{...})}`. Every inbound is `ServerFrame` — `LoginResponse`/`UdpHandshakeAck` only during handshake; `Ping` (reply with `Pong`); `game_payload` is your `ServerMessage`.
+### 7b. Install godobuf to generate types from your `game.proto`
 
-The `_process()` function of your network singleton polls both sockets:
+The plugin handles control-plane messages internally, but your own
+`game.proto` (`Credentials`, `Move`, `ClientMessage`, `ServerMessage`,
+etc.) still needs to be turned into GDScript classes.
+[oniksan/godobuf](https://github.com/oniksan/godobuf) is the standard
+choice.
+
+1. Copy godobuf into `addons/godobuf/` in your Godot project and enable it.
+2. Copy your `game.proto` into the Godot project.
+3. Project → Tools → Godobuf → point at `game.proto` → generate
+   `game_pb.gd`.
+
+### 7c. Connect and play
+
+A minimal script that mirrors the Go test client:
 
 ```gdscript
-func _process(_delta: float) -> void:
-    tcp.poll()
-    while tcp.get_available_bytes() >= 4:
-        var frame := _read_one_tcp_frame()
-        if frame.is_empty():
-            break
-        _handle_server_frame(frame, false)
+extends Node
 
-    while udp.get_available_packet_count() > 0:
-        _handle_server_frame(udp.get_packet(), true)
+func _ready() -> void:
+    GodotNet.connected.connect(_on_connected)
+    GodotNet.disconnected.connect(_on_disconnected)
+    GodotNet.login_failed.connect(_on_login_failed)
+    GodotNet.server_message.connect(_on_server_message)
+    GodotNet.set_auto_reconnect(true)
+
+    var creds := GamePb.Credentials.new()
+    creds.set_username("alice")
+    creds.set_token("dev")
+    GodotNet.connect_to_server("127.0.0.1", 7777, creds.to_bytes(), 7778)
+
+func _on_connected(player_id: int) -> void:
+    print("connected as player ", player_id)
+    var move := GamePb.Move.new()
+    move.set_x(42.5); move.set_y(17.0)
+    var cm := GamePb.ClientMessage.new()
+    cm.set_move(move)
+    GodotNet.send_unreliable(cm.to_bytes())
+
+func _on_disconnected(code: int, reason: String) -> void:
+    print("disconnected (%d): %s" % [code, reason])
+
+func _on_login_failed(error_message: String) -> void:
+    print("login failed: ", error_message)
+
+func _on_server_message(payload: PackedByteArray, _reliable: bool) -> void:
+    var sm := GamePb.ServerMessage.new()
+    if sm.from_bytes(payload) != GamePb.PB_ERR.NO_ERRORS:
+        return
+    if sm.has_moved():
+        var m := sm.get_moved()
+        print("player %d at (%.1f, %.1f)" % [
+            m.get_player_id(), m.get_x(), m.get_y()])
 ```
 
-See the [README's Godot example sketch](../README.md) for more detail on
-the GDScript side.
+Run this against the server from Step 5 and you should see the same
+"player N at (42.5, 17.0)" log on the Godot side that the Go test
+client produced in Step 6.
+
+See the [godotnet-client README](https://github.com/jordanstites/godotnet-client)
+for the full API surface (signals, `send_reliable` vs `send_unreliable`,
+`DisconnectCode` branches, etc.).
 
 ## Common pitfalls
 
 - **Forgot `paths=source_relative` on protoc.** Without it, `protoc-gen-go`
   generates the .pb.go in a nested path matching the go_package, which
   rarely matches your repo layout.
-- **`go mod tidy` complains it can't find godotnet.** Double-check the
-  `replace` directive points at the correct relative path.
+- **Hyphen in the proto `package` line.** Protobuf package names are
+  identifiers — letters, digits, underscores only. If your Go module
+  has a hyphen (e.g. `example.com/my-game`), don't mirror it as
+  `package my-game;`; protoc will fail with `Expected ";"`. Use
+  `package my_game;` instead. (The `go_package` option *is* a Go
+  import path and can have hyphens — that's why one works and the
+  other doesn't.)
 - **UDP messages don't arrive.** Make sure you actually completed the
   UDP handshake first — pre-handshake UDP datagrams from unknown
   remotes are dropped silently. Look for the "udp handshake rejected"

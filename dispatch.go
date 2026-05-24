@@ -6,7 +6,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	controlpb "github.com/jordanstites/godotnet/internal/proto"
+	controlpb "github.com/jordanstites/godotnet/controlpb"
 )
 
 // handlerRegistry maps a protobuf full-name to a ClientHandler. The

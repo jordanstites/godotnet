@@ -11,7 +11,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	controlpb "github.com/jordanstites/godotnet/internal/proto"
+	controlpb "github.com/jordanstites/godotnet/controlpb"
 )
 
 // handleLogin processes a parsed Login message. On success it
