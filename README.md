@@ -127,7 +127,7 @@ make proto      # regenerate protobuf code
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how the library works inside.
 - [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) — build your first server.
-- [godotnet-demos](../godotnet-demos) — a complete Godot project + Go server with one demo per communication style (auth, chat, RPC shop, multiplayer pong, sub-backed stock ticker). The fastest way to see every API in action.
+- [godotnet-demos](https://github.com/jordanstites/godotnet-demos) — a complete Godot project + Go server with one demo per communication style (auth, chat, RPC shop, multiplayer pong, sub-backed stock ticker). The fastest way to see every API in action.
 
 ## v0.1 build status
 
