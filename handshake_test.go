@@ -73,6 +73,111 @@ func TestHandleLogin_SuccessTransitionsAndQueuesResponse(t *testing.T) {
 	}
 }
 
+func TestHandleLogin_OnAuthFiresWithCredentials(t *testing.T) {
+	var gotSess *Session
+	var gotCreds proto.Message
+	s := NewServer(Config{
+		LoginPrototype: &controlpb.Ping{},
+		Authenticate: func(_ context.Context, _ proto.Message) (PlayerID, error) {
+			return 7, nil
+		},
+		OnAuth: func(sess *Session, creds proto.Message) {
+			gotSess = sess
+			gotCreds = creds
+			// Confirm sess.ID is already populated by the time OnAuth
+			// fires — game code stashing per-player state will want it.
+			if sess.ID != 7 {
+				t.Errorf("OnAuth sess.ID: got %d, want 7", sess.ID)
+			}
+			sess.UserData = "stashed"
+		},
+	})
+
+	sess := &Session{
+		sendTCP:   make(chan []byte, 16),
+		authState: sessionPreLogin,
+	}
+	creds, err := proto.Marshal(&controlpb.Ping{Nonce: 123})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tc := &tickCtx{server: s, tick: 1, now: time.Now()}
+	s.handleLogin(tc, sess, &controlpb.Login{Credentials: creds})
+
+	if gotSess != sess {
+		t.Errorf("OnAuth not called with the expected session")
+	}
+	if gotCreds == nil {
+		t.Fatal("OnAuth not called with credentials")
+	}
+	if pong, ok := gotCreds.(*controlpb.Ping); !ok || pong.Nonce != 123 {
+		t.Errorf("OnAuth creds: got %v, want Ping{Nonce: 123}", gotCreds)
+	}
+	if sess.UserData != "stashed" {
+		t.Errorf("OnAuth side-effect missing: UserData=%v", sess.UserData)
+	}
+}
+
+func TestHandleLogin_OnAuthPanicRecovered(t *testing.T) {
+	s := NewServer(Config{
+		LoginPrototype: &controlpb.Ping{},
+		Authenticate: func(_ context.Context, _ proto.Message) (PlayerID, error) {
+			return 11, nil
+		},
+		OnAuth: func(_ *Session, _ proto.Message) {
+			panic("kaboom from OnAuth")
+		},
+	})
+
+	sess := &Session{
+		sendTCP:   make(chan []byte, 16),
+		authState: sessionPreLogin,
+	}
+	creds, _ := proto.Marshal(&controlpb.Ping{})
+	tc := &tickCtx{server: s, tick: 1, now: time.Now()}
+
+	// Should not panic — invokeOnAuth recovers and logs.
+	s.handleLogin(tc, sess, &controlpb.Login{Credentials: creds})
+
+	// Login should still have succeeded: session promoted, LoginResponse queued.
+	if sess.authState != sessionAwaitingUDP {
+		t.Errorf("authState: got %v, want sessionAwaitingUDP", sess.authState)
+	}
+	if got := s.sessions[11]; got != sess {
+		t.Errorf("session not registered after OnAuth panic")
+	}
+	select {
+	case <-sess.sendTCP:
+	case <-time.After(time.Second):
+		t.Fatal("no LoginResponse queued after OnAuth panic")
+	}
+}
+
+func TestHandleLogin_OnAuthDoesNotFireOnAuthFailure(t *testing.T) {
+	var onAuthCalled bool
+	s := NewServer(Config{
+		LoginPrototype: &controlpb.Ping{},
+		Authenticate: func(_ context.Context, _ proto.Message) (PlayerID, error) {
+			return 0, errors.New("nope")
+		},
+		OnAuth: func(_ *Session, _ proto.Message) {
+			onAuthCalled = true
+		},
+	})
+
+	sess := &Session{
+		sendTCP:   make(chan []byte, 16),
+		authState: sessionPreLogin,
+	}
+	creds, _ := proto.Marshal(&controlpb.Ping{})
+	tc := &tickCtx{server: s, tick: 1, now: time.Now()}
+	s.handleLogin(tc, sess, &controlpb.Login{Credentials: creds})
+
+	if onAuthCalled {
+		t.Error("OnAuth fired despite Authenticate returning an error")
+	}
+}
+
 func TestHandleLogin_AuthRejectedSchedulesDisconnect(t *testing.T) {
 	s := NewServer(Config{
 		LoginPrototype: &controlpb.Ping{},

@@ -333,6 +333,138 @@ func (x *Pong) GetNonce() uint64 {
 	return 0
 }
 
+// RpcRequest carries one client→server request. The library matches the
+// inbound RpcResponse on the client side by correlation_id. Payload is
+// the marshaled bytes of Config.RPCRequestPrototype with a single oneof
+// body populated; the library extracts that body and dispatches by its
+// protobuf full-name (same pattern as ClientMessage).
+type RpcRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CorrelationId uint64                 `protobuf:"varint,1,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	Payload       []byte                 `protobuf:"bytes,2,opt,name=payload,proto3" json:"payload,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RpcRequest) Reset() {
+	*x = RpcRequest{}
+	mi := &file_control_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RpcRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RpcRequest) ProtoMessage() {}
+
+func (x *RpcRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_control_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RpcRequest.ProtoReflect.Descriptor instead.
+func (*RpcRequest) Descriptor() ([]byte, []int) {
+	return file_control_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *RpcRequest) GetCorrelationId() uint64 {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return 0
+}
+
+func (x *RpcRequest) GetPayload() []byte {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
+}
+
+// RpcResponse carries the server's reply for one RpcRequest. ok=false
+// means the handler returned an error (error_message is its .Error()),
+// a panic was recovered, or no handler was registered for the request
+// type. ok=true means payload contains the marshaled bare response
+// message — the client decodes it using the response type associated
+// with the request type it sent (the schema-level pairing is not
+// carried on the wire).
+type RpcResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CorrelationId uint64                 `protobuf:"varint,1,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
+	Ok            bool                   `protobuf:"varint,2,opt,name=ok,proto3" json:"ok,omitempty"`
+	ErrorMessage  string                 `protobuf:"bytes,3,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
+	Payload       []byte                 `protobuf:"bytes,4,opt,name=payload,proto3" json:"payload,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RpcResponse) Reset() {
+	*x = RpcResponse{}
+	mi := &file_control_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RpcResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RpcResponse) ProtoMessage() {}
+
+func (x *RpcResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_control_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RpcResponse.ProtoReflect.Descriptor instead.
+func (*RpcResponse) Descriptor() ([]byte, []int) {
+	return file_control_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *RpcResponse) GetCorrelationId() uint64 {
+	if x != nil {
+		return x.CorrelationId
+	}
+	return 0
+}
+
+func (x *RpcResponse) GetOk() bool {
+	if x != nil {
+		return x.Ok
+	}
+	return false
+}
+
+func (x *RpcResponse) GetErrorMessage() string {
+	if x != nil {
+		return x.ErrorMessage
+	}
+	return ""
+}
+
+func (x *RpcResponse) GetPayload() []byte {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
+}
+
 // ClientFrame is the wire-level wrapper for every message sent from
 // client to server, over both TCP and UDP. The Godot client constructs
 // this and the library unmarshals it on receive.
@@ -344,6 +476,7 @@ type ClientFrame struct {
 	//	*ClientFrame_UdpHandshake
 	//	*ClientFrame_Pong
 	//	*ClientFrame_GamePayload
+	//	*ClientFrame_RpcRequest
 	Body          isClientFrame_Body `protobuf_oneof:"body"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -351,7 +484,7 @@ type ClientFrame struct {
 
 func (x *ClientFrame) Reset() {
 	*x = ClientFrame{}
-	mi := &file_control_proto_msgTypes[6]
+	mi := &file_control_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -363,7 +496,7 @@ func (x *ClientFrame) String() string {
 func (*ClientFrame) ProtoMessage() {}
 
 func (x *ClientFrame) ProtoReflect() protoreflect.Message {
-	mi := &file_control_proto_msgTypes[6]
+	mi := &file_control_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -376,7 +509,7 @@ func (x *ClientFrame) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClientFrame.ProtoReflect.Descriptor instead.
 func (*ClientFrame) Descriptor() ([]byte, []int) {
-	return file_control_proto_rawDescGZIP(), []int{6}
+	return file_control_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ClientFrame) GetBody() isClientFrame_Body {
@@ -422,6 +555,15 @@ func (x *ClientFrame) GetGamePayload() []byte {
 	return nil
 }
 
+func (x *ClientFrame) GetRpcRequest() *RpcRequest {
+	if x != nil {
+		if x, ok := x.Body.(*ClientFrame_RpcRequest); ok {
+			return x.RpcRequest
+		}
+	}
+	return nil
+}
+
 type isClientFrame_Body interface {
 	isClientFrame_Body()
 }
@@ -445,6 +587,10 @@ type ClientFrame_GamePayload struct {
 	GamePayload []byte `protobuf:"bytes,16,opt,name=game_payload,json=gamePayload,proto3,oneof"`
 }
 
+type ClientFrame_RpcRequest struct {
+	RpcRequest *RpcRequest `protobuf:"bytes,17,opt,name=rpc_request,json=rpcRequest,proto3,oneof"`
+}
+
 func (*ClientFrame_Login) isClientFrame_Body() {}
 
 func (*ClientFrame_UdpHandshake) isClientFrame_Body() {}
@@ -452,6 +598,8 @@ func (*ClientFrame_UdpHandshake) isClientFrame_Body() {}
 func (*ClientFrame_Pong) isClientFrame_Body() {}
 
 func (*ClientFrame_GamePayload) isClientFrame_Body() {}
+
+func (*ClientFrame_RpcRequest) isClientFrame_Body() {}
 
 // ServerFrame is the wire-level wrapper for every message sent from
 // server to client.
@@ -463,6 +611,7 @@ type ServerFrame struct {
 	//	*ServerFrame_UdpHandshakeAck
 	//	*ServerFrame_Ping
 	//	*ServerFrame_GamePayload
+	//	*ServerFrame_RpcResponse
 	Body          isServerFrame_Body `protobuf_oneof:"body"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -470,7 +619,7 @@ type ServerFrame struct {
 
 func (x *ServerFrame) Reset() {
 	*x = ServerFrame{}
-	mi := &file_control_proto_msgTypes[7]
+	mi := &file_control_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -482,7 +631,7 @@ func (x *ServerFrame) String() string {
 func (*ServerFrame) ProtoMessage() {}
 
 func (x *ServerFrame) ProtoReflect() protoreflect.Message {
-	mi := &file_control_proto_msgTypes[7]
+	mi := &file_control_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -495,7 +644,7 @@ func (x *ServerFrame) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServerFrame.ProtoReflect.Descriptor instead.
 func (*ServerFrame) Descriptor() ([]byte, []int) {
-	return file_control_proto_rawDescGZIP(), []int{7}
+	return file_control_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ServerFrame) GetBody() isServerFrame_Body {
@@ -541,6 +690,15 @@ func (x *ServerFrame) GetGamePayload() []byte {
 	return nil
 }
 
+func (x *ServerFrame) GetRpcResponse() *RpcResponse {
+	if x != nil {
+		if x, ok := x.Body.(*ServerFrame_RpcResponse); ok {
+			return x.RpcResponse
+		}
+	}
+	return nil
+}
+
 type isServerFrame_Body interface {
 	isServerFrame_Body()
 }
@@ -561,6 +719,10 @@ type ServerFrame_GamePayload struct {
 	GamePayload []byte `protobuf:"bytes,16,opt,name=game_payload,json=gamePayload,proto3,oneof"`
 }
 
+type ServerFrame_RpcResponse struct {
+	RpcResponse *RpcResponse `protobuf:"bytes,17,opt,name=rpc_response,json=rpcResponse,proto3,oneof"`
+}
+
 func (*ServerFrame_LoginResponse) isServerFrame_Body() {}
 
 func (*ServerFrame_UdpHandshakeAck) isServerFrame_Body() {}
@@ -568,6 +730,8 @@ func (*ServerFrame_UdpHandshakeAck) isServerFrame_Body() {}
 func (*ServerFrame_Ping) isServerFrame_Body() {}
 
 func (*ServerFrame_GamePayload) isServerFrame_Body() {}
+
+func (*ServerFrame_RpcResponse) isServerFrame_Body() {}
 
 var File_control_proto protoreflect.FileDescriptor
 
@@ -591,18 +755,30 @@ const file_control_proto_rawDesc = "" +
 	"\x04Ping\x12\x14\n" +
 	"\x05nonce\x18\x01 \x01(\x04R\x05nonce\"\x1c\n" +
 	"\x04Pong\x12\x14\n" +
-	"\x05nonce\x18\x01 \x01(\x04R\x05nonce\"\xe0\x01\n" +
+	"\x05nonce\x18\x01 \x01(\x04R\x05nonce\"M\n" +
+	"\n" +
+	"RpcRequest\x12%\n" +
+	"\x0ecorrelation_id\x18\x01 \x01(\x04R\rcorrelationId\x12\x18\n" +
+	"\apayload\x18\x02 \x01(\fR\apayload\"\x83\x01\n" +
+	"\vRpcResponse\x12%\n" +
+	"\x0ecorrelation_id\x18\x01 \x01(\x04R\rcorrelationId\x12\x0e\n" +
+	"\x02ok\x18\x02 \x01(\bR\x02ok\x12#\n" +
+	"\rerror_message\x18\x03 \x01(\tR\ferrorMessage\x12\x18\n" +
+	"\apayload\x18\x04 \x01(\fR\apayload\"\xa1\x02\n" +
 	"\vClientFrame\x12/\n" +
 	"\x05login\x18\x01 \x01(\v2\x17.godotnet.control.LoginH\x00R\x05login\x12E\n" +
 	"\rudp_handshake\x18\x02 \x01(\v2\x1e.godotnet.control.UdpHandshakeH\x00R\fudpHandshake\x12,\n" +
 	"\x04pong\x18\x03 \x01(\v2\x16.godotnet.control.PongH\x00R\x04pong\x12#\n" +
-	"\fgame_payload\x18\x10 \x01(\fH\x00R\vgamePayloadB\x06\n" +
-	"\x04body\"\x83\x02\n" +
+	"\fgame_payload\x18\x10 \x01(\fH\x00R\vgamePayload\x12?\n" +
+	"\vrpc_request\x18\x11 \x01(\v2\x1c.godotnet.control.RpcRequestH\x00R\n" +
+	"rpcRequestB\x06\n" +
+	"\x04body\"\xc7\x02\n" +
 	"\vServerFrame\x12H\n" +
 	"\x0elogin_response\x18\x01 \x01(\v2\x1f.godotnet.control.LoginResponseH\x00R\rloginResponse\x12O\n" +
 	"\x11udp_handshake_ack\x18\x02 \x01(\v2!.godotnet.control.UdpHandshakeAckH\x00R\x0fudpHandshakeAck\x12,\n" +
 	"\x04ping\x18\x03 \x01(\v2\x16.godotnet.control.PingH\x00R\x04ping\x12#\n" +
-	"\fgame_payload\x18\x10 \x01(\fH\x00R\vgamePayloadB\x06\n" +
+	"\fgame_payload\x18\x10 \x01(\fH\x00R\vgamePayload\x12B\n" +
+	"\frpc_response\x18\x11 \x01(\v2\x1d.godotnet.control.RpcResponseH\x00R\vrpcResponseB\x06\n" +
 	"\x04bodyB;Z9github.com/jordanstites/godotnet/internal/proto;controlpbb\x06proto3"
 
 var (
@@ -617,7 +793,7 @@ func file_control_proto_rawDescGZIP() []byte {
 	return file_control_proto_rawDescData
 }
 
-var file_control_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_control_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_control_proto_goTypes = []any{
 	(*Login)(nil),           // 0: godotnet.control.Login
 	(*LoginResponse)(nil),   // 1: godotnet.control.LoginResponse
@@ -625,21 +801,25 @@ var file_control_proto_goTypes = []any{
 	(*UdpHandshakeAck)(nil), // 3: godotnet.control.UdpHandshakeAck
 	(*Ping)(nil),            // 4: godotnet.control.Ping
 	(*Pong)(nil),            // 5: godotnet.control.Pong
-	(*ClientFrame)(nil),     // 6: godotnet.control.ClientFrame
-	(*ServerFrame)(nil),     // 7: godotnet.control.ServerFrame
+	(*RpcRequest)(nil),      // 6: godotnet.control.RpcRequest
+	(*RpcResponse)(nil),     // 7: godotnet.control.RpcResponse
+	(*ClientFrame)(nil),     // 8: godotnet.control.ClientFrame
+	(*ServerFrame)(nil),     // 9: godotnet.control.ServerFrame
 }
 var file_control_proto_depIdxs = []int32{
 	0, // 0: godotnet.control.ClientFrame.login:type_name -> godotnet.control.Login
 	2, // 1: godotnet.control.ClientFrame.udp_handshake:type_name -> godotnet.control.UdpHandshake
 	5, // 2: godotnet.control.ClientFrame.pong:type_name -> godotnet.control.Pong
-	1, // 3: godotnet.control.ServerFrame.login_response:type_name -> godotnet.control.LoginResponse
-	3, // 4: godotnet.control.ServerFrame.udp_handshake_ack:type_name -> godotnet.control.UdpHandshakeAck
-	4, // 5: godotnet.control.ServerFrame.ping:type_name -> godotnet.control.Ping
-	6, // [6:6] is the sub-list for method output_type
-	6, // [6:6] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	6, // 3: godotnet.control.ClientFrame.rpc_request:type_name -> godotnet.control.RpcRequest
+	1, // 4: godotnet.control.ServerFrame.login_response:type_name -> godotnet.control.LoginResponse
+	3, // 5: godotnet.control.ServerFrame.udp_handshake_ack:type_name -> godotnet.control.UdpHandshakeAck
+	4, // 6: godotnet.control.ServerFrame.ping:type_name -> godotnet.control.Ping
+	7, // 7: godotnet.control.ServerFrame.rpc_response:type_name -> godotnet.control.RpcResponse
+	8, // [8:8] is the sub-list for method output_type
+	8, // [8:8] is the sub-list for method input_type
+	8, // [8:8] is the sub-list for extension type_name
+	8, // [8:8] is the sub-list for extension extendee
+	0, // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_control_proto_init() }
@@ -647,17 +827,19 @@ func file_control_proto_init() {
 	if File_control_proto != nil {
 		return
 	}
-	file_control_proto_msgTypes[6].OneofWrappers = []any{
+	file_control_proto_msgTypes[8].OneofWrappers = []any{
 		(*ClientFrame_Login)(nil),
 		(*ClientFrame_UdpHandshake)(nil),
 		(*ClientFrame_Pong)(nil),
 		(*ClientFrame_GamePayload)(nil),
+		(*ClientFrame_RpcRequest)(nil),
 	}
-	file_control_proto_msgTypes[7].OneofWrappers = []any{
+	file_control_proto_msgTypes[9].OneofWrappers = []any{
 		(*ServerFrame_LoginResponse)(nil),
 		(*ServerFrame_UdpHandshakeAck)(nil),
 		(*ServerFrame_Ping)(nil),
 		(*ServerFrame_GamePayload)(nil),
+		(*ServerFrame_RpcResponse)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -665,7 +847,7 @@ func file_control_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_control_proto_rawDesc), len(file_control_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

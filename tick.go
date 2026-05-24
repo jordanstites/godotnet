@@ -115,6 +115,12 @@ func (s *Server) dispatchMessage(tc *tickCtx, env event) {
 		}
 		s.dispatchUserMessage(tc, sess, body.GamePayload)
 
+	case *controlpb.ClientFrame_RpcRequest:
+		if env.isUDP || sess == nil || sess.authState != sessionReady {
+			return
+		}
+		s.dispatchRPC(tc, sess, body.RpcRequest)
+
 	case nil:
 		s.log.Debug("ClientFrame with empty body",
 			"udp", env.isUDP,
@@ -154,6 +160,15 @@ func (s *Server) invokeOnConnect(cb func(*Session), sess *Session) {
 		}
 	}()
 	cb(sess)
+}
+
+func (s *Server) invokeOnAuth(cb func(*Session, proto.Message), sess *Session, credentials proto.Message) {
+	defer func() {
+		if r := recover(); r != nil {
+			s.log.Error("OnAuth panic recovered", "panic", r, "player", sess.ID)
+		}
+	}()
+	cb(sess, credentials)
 }
 
 func (s *Server) invokeOnDisconnect(cb func(*Session, error), sess *Session, reason error) {

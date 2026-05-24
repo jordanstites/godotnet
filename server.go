@@ -82,6 +82,26 @@ type Config struct {
 	// If nil, all post-login inbound frames are dropped with a log line.
 	ClientMessagePrototype proto.Message
 
+	// RPCRequestPrototype is your top-level inbound RPC request
+	// message. Same pattern as ClientMessagePrototype: it must hold a
+	// single oneof field over every request type you intend to serve,
+	// and handlers registered via HandleRPC match against the
+	// populated oneof body. RPC responses are bare user messages (no
+	// envelope) — the client knows the response type from the request
+	// type at schema level, so the wire only carries marshaled bytes.
+	//
+	// If nil, inbound RpcRequest frames are rejected with an error
+	// response.
+	RPCRequestPrototype proto.Message
+
+	// OnAuth fires on the tick goroutine immediately after Authenticate
+	// returns success, before LoginResponse is sent. Use it to seed
+	// per-player state derived from credentials (username, starting
+	// gold, role) into sess.UserData — this is the only callback that
+	// sees both the session and the unmarshaled credentials, so it's
+	// the natural place to do that. Optional; nil is a no-op.
+	OnAuth func(sess *Session, credentials proto.Message)
+
 	// OnConnect fires on the tick goroutine after a session is fully
 	// established (TCP login + UDP pairing both complete). Optional.
 	OnConnect func(s *Session)
@@ -120,6 +140,13 @@ type Config struct {
 // tick.
 type ClientHandler func(ctx TickCtx, sess *Session, msg proto.Message)
 
+// RPCHandler is invoked on the tick goroutine when an inbound RPC
+// request of the registered protobuf type arrives. The returned message
+// is marshaled and sent back as RpcResponse.payload with ok=true. A
+// non-nil error becomes RpcResponse{ok=false, error_message=err.Error()}
+// and any response message is ignored.
+type RPCHandler func(ctx TickCtx, sess *Session, req proto.Message) (proto.Message, error)
+
 // Server is the main library entry point. Construct with NewServer,
 // register handlers with HandleClient and OnTick, then call Run.
 type Server struct {
@@ -132,6 +159,11 @@ type Server struct {
 	// handlers is the typed-handler registry. Safe for concurrent
 	// register/lookup, though in practice it is populated before Run.
 	handlers handlerRegistry
+
+	// rpcHandlers is the typed RPC handler registry. Lookup happens
+	// via rpcRegistry.lookup using the populated oneof body of an
+	// unmarshaled RPCRequestPrototype clone.
+	rpcHandlers rpcRegistry
 
 	// events is the inbound event queue, allocated by NewServer and
 	// read by the tick goroutine. I/O goroutines push events into it.
@@ -193,6 +225,16 @@ func (s *Server) OnTick(cb func(ctx TickCtx)) {
 // type overwrites the previous handler.
 func (s *Server) HandleClient(prototype proto.Message, handler ClientHandler) {
 	s.handlers.register(prototype, handler)
+}
+
+// HandleRPC registers an RPC handler for inbound RpcRequest payloads
+// whose populated oneof body type matches prototype. Must be called
+// before Run. Config.RPCRequestPrototype must also be set or the
+// request frame will be rejected before lookup.
+//
+// Matching is by protobuf full-name. Re-registering overwrites.
+func (s *Server) HandleRPC(prototype proto.Message, handler RPCHandler) {
+	s.rpcHandlers.register(prototype, handler)
 }
 
 // Run blocks until ctx is cancelled. Returns ctx.Err() on clean shutdown

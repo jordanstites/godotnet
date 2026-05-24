@@ -39,4 +39,10 @@ var (
 	// ErrPingTimeout is recorded when a session is disconnected
 	// because it stopped responding to UDP pings.
 	ErrPingTimeout = errors.New("godotnet: ping timeout")
+
+	// ErrRPCHandlerPanic is returned to the caller (as the response
+	// error_message) when an RPC handler panics. The library recovers
+	// and the session stays connected — an RPC panic is a single
+	// faulty handler, not grounds to kick the player.
+	ErrRPCHandlerPanic = errors.New("godotnet: rpc handler panicked")
 )

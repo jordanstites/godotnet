@@ -55,6 +55,10 @@ func (s *Server) handleLogin(_ *tickCtx, sess *Session, loginMsg *controlpb.Logi
 	sess.authState = sessionAwaitingUDP
 	s.sessions[playerID] = sess
 
+	if cb := s.cfg.OnAuth; cb != nil {
+		s.invokeOnAuth(cb, sess, credentials)
+	}
+
 	udpEndpoint := s.cfg.UDPAdvertiseAddr
 	if udpEndpoint == "" {
 		udpEndpoint = s.cfg.UDPAddr
